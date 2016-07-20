@@ -13,7 +13,7 @@ type offsetMapData map[int][]string
 type offsetMapKeys []int
 
 func (omk offsetMapKeys) hasWithinBounds(x int) bool {
-	return omk[0] >= x && x <= omk[len(omk)-1]
+	return omk[0] <= x && x <= omk[len(omk)-1]
 }
 
 type OffsetMap struct {
