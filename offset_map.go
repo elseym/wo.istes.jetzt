@@ -57,38 +57,38 @@ func LoadOffsetMap(filename string) (om OffsetMap, err error) {
 	return
 }
 
-func (om OffsetMap) GetOffsets() offsetMapKeys {
-	return om.keys
-}
-
 func (om OffsetMap) GetCities(offset int) (cities []string) {
 	cities, _ = om.data[offset]
 	return
 }
 
-func (om OffsetMap) GetLocaltimeIn(offset int) time.Time {
-	return time.Now().In(time.FixedZone(strconv.Itoa(offset), offset))
+func (om OffsetMap) GetLocaltime(offset int) (t time.Time) {
+	name := strconv.Itoa(offset)
+	t = time.Now().In(time.FixedZone(name, offset))
+	return
 }
 
-func (om OffsetMap) GetPreviousOffset(offset int) int {
-	pos := sort.SearchInts(om.keys, offset) - 1
-	return om.keys[pos]
-}
-
-func (om OffsetMap) GetOffsetFor(h, m int) int {
+func (om OffsetMap) CalculateUtcOffset(h, m int) (o int) {
 	now := time.Now().UTC()
 	then := time.Date(now.Year(), now.Month(), now.Day(), h, m, 0, 0, now.Location())
-	delta := then.Sub(now).Seconds()
 
-	if !om.keys.hasWithinBounds(int(delta)) {
+	for {
+		delta := then.Sub(now).Seconds()
+		o = int(delta)
+
+		if om.keys.hasWithinBounds(o) {
+			break
+		}
+
 		sgn := math.Copysign(1, delta)
 		then = then.Add(-24 * time.Hour * time.Duration(sgn))
-		delta = then.Sub(now).Seconds()
 	}
 
-	return int(delta)
+	return
 }
 
-func (om OffsetMap) GetOffsetForUpcoming(h, m int) int {
-	return om.GetPreviousOffset(om.GetOffsetFor(h, m))
+func (om OffsetMap) CalculatePreviousUtcOffset(h, m int) (o int) {
+	offset := om.CalculateUtcOffset(h, m)
+	o = om.keys[sort.SearchInts(om.keys, offset)-1]
+	return
 }
