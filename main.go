@@ -12,8 +12,13 @@ var rx *regexp.Regexp
 var om OffsetMap
 
 func main() {
-	om, _ = LoadOffsetMap("./offset_map.json")
 	rx = regexp.MustCompile(`/(\d\d?)(\d\d)$`)
+
+	var err error
+	om, err = LoadOffsetMap("./offset_map.json")
+	if err != nil {
+		return
+	}
 
 	http.HandleFunc("/", dannHandler)
 	http.ListenAndServe("127.0.0.1:1620", nil)

@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -49,9 +51,22 @@ func (om *OffsetMap) UnmarshalJSON(data []byte) (err error) {
 }
 
 func LoadOffsetMap(filename string) (om OffsetMap, err error) {
-	input, err := ioutil.ReadFile(filename)
-	if err == nil {
-		err = json.Unmarshal(input, &om)
+	if _, err = os.Stat(filename); os.IsNotExist(err) {
+		fmt.Println(filename, "does not exist")
+		return
+	}
+
+	var input []byte
+	input, err = ioutil.ReadFile(filename)
+	if err != nil {
+		fmt.Println("could not read", filename)
+		return
+	}
+
+	err = json.Unmarshal(input, &om)
+	if err != nil {
+		fmt.Println("could not parse contents of", filename)
+		return
 	}
 
 	return
