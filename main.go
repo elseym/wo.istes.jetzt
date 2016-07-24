@@ -2,26 +2,44 @@ package main
 
 import (
 	"errors"
+	"flag"
+	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 )
 
+type config struct {
+	Map  *string
+	Host *string
+	Port *int
+}
+
 var rx *regexp.Regexp
 var om OffsetMap
+var omFile string
 
 func main() {
 	rx = regexp.MustCompile(`/(\d\d?)(\d\d)$`)
 
+	cfg := config{
+		flag.String("map", "./offset_map.json", "Location of 'offset_map.json'"),
+		flag.String("host", "localhost", "Hostname or IP-Address to bind to"),
+		flag.Int("port", 1620, "Port number to listen on"),
+	}
+	flag.Parse()
+
 	var err error
-	om, err = LoadOffsetMap("./offset_map.json")
+	om, err = LoadOffsetMap(*cfg.Map)
 	if err != nil {
 		return
 	}
 
+	addr := fmt.Sprintf("%s:%d", *cfg.Host, *cfg.Port)
+
 	http.HandleFunc("/", dannHandler)
-	http.ListenAndServe("127.0.0.1:1620", nil)
+	http.ListenAndServe(addr, nil)
 }
 
 func dannHandler(w http.ResponseWriter, r *http.Request) {
