@@ -59,7 +59,7 @@ func dannHandler(w http.ResponseWriter, r *http.Request) {
 		response.SetNotFound(err)
 	}
 
-	response.Respond(w)
+	response.RespondJSON(w)
 }
 
 func parseURLForTime(url *url.URL) (h int, m int, err error) {

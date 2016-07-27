@@ -28,8 +28,9 @@ func (r *Response) appendPayloadFor(h, m int) {
 	})
 }
 
-func (r *Response) Respond(w http.ResponseWriter) {
+func (r *Response) RespondJSON(w http.ResponseWriter) {
 	w.WriteHeader(r.Status)
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 	data, _ := json.Marshal(r)
 	w.Write(data)
 }
