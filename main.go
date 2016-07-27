@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 )
@@ -31,15 +32,19 @@ func main() {
 	flag.Parse()
 
 	var err error
+	fmt.Print("[wo.istes.jetzt] loading offset map... ")
 	om, err = LoadOffsetMap(*cfg.Map)
 	if err != nil {
-		return
+		os.Exit(1)
 	}
+	fmt.Println("ok.")
 
 	addr := fmt.Sprintf("%s:%d", *cfg.Host, *cfg.Port)
 
 	http.HandleFunc("/", dannHandler)
+	fmt.Printf("[wo.istes.jetzt] listening on 'http://%s:%d'... ", *cfg.Host, *cfg.Port)
 	http.ListenAndServe(addr, nil)
+	fmt.Println("done.")
 }
 
 func dannHandler(w http.ResponseWriter, r *http.Request) {
