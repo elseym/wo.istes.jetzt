@@ -40,9 +40,9 @@ func dannHandler(w http.ResponseWriter, r *http.Request) {
 	response := Response{http.StatusOK, "OK", make([]LocSpec, 0)}
 
 	if h, m, err := parseURLForTime(r.URL); err == nil {
-		response.appendPayloadFor(h, m)
+		response.AppendPayloadFor(h, m)
 		if r.URL.Query().Get("mode") == "12h" {
-			response.appendPayloadFor((h+12)%24, m)
+			response.AppendPayloadFor((h+12)%24, m)
 		}
 	} else {
 		response.SetNotFound(err)

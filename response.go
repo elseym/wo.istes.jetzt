@@ -9,6 +9,7 @@ import (
 type LocSpec struct {
 	UtcOffset int      `json:"utc_offset"`
 	LocalTime string   `json:"local_time"`
+	Delta     int      `json:"delta"`
 	Locations []string `json:"locations"`
 }
 
@@ -18,14 +19,12 @@ type Response struct {
 	Payload []LocSpec `json:"payload"`
 }
 
-func (r *Response) appendPayloadFor(h, m int) {
-	offset := om.CalculatePreviousUtcOffset(h, m)
+func (r *Response) AppendPayloadFor(h, m int) {
+	utcOffset, delta := om.CalculateOffsets(h, m)
+	localtime := om.GetLocaltime(utcOffset).Format(time.RFC1123Z)
+	cities := om.GetCities(utcOffset)
 
-	r.Payload = append(r.Payload, LocSpec{
-		offset,
-		om.GetLocaltime(offset).Format(time.RFC1123Z),
-		om.GetCities(offset),
-	})
+	r.Payload = append(r.Payload, LocSpec{utcOffset, localtime, delta, cities})
 }
 
 func (r *Response) RespondJSON(w http.ResponseWriter) {

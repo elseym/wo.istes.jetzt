@@ -80,27 +80,22 @@ func (om OffsetMap) GetLocaltime(offset int) (t time.Time) {
 	return
 }
 
-func (om OffsetMap) CalculateUtcOffset(h, m int) (o int) {
+func (om OffsetMap) CalculateOffsets(h, m int) (utcOffset int, delta int) {
 	now := time.Now().UTC()
-	then := time.Date(now.Year(), now.Month(), now.Day(), h, m, 0, 0, now.Location())
+	then := time.Date(now.Year(), now.Month(), now.Day(), h%24, m%60, 0, 0, now.Location())
 
 	for {
-		delta := then.Sub(now).Seconds()
-		o = int(delta)
+		diff := int(then.Sub(now).Seconds())
 
-		if om.keys.hasWithinBounds(o) {
+		if om.keys.hasWithinBounds(diff) {
+			utcOffset = om.keys[sort.SearchInts(om.keys, diff)-1]
+			delta = diff - utcOffset
 			break
 		}
 
-		sgn := math.Copysign(1, delta)
+		sgn := math.Copysign(1, float64(diff))
 		then = then.Add(-24 * time.Hour * time.Duration(sgn))
 	}
 
-	return
-}
-
-func (om OffsetMap) CalculatePreviousUtcOffset(h, m int) (o int) {
-	offset := om.CalculateUtcOffset(h, m)
-	o = om.keys[sort.SearchInts(om.keys, offset)-1]
 	return
 }
