@@ -1,14 +1,11 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
-	"strconv"
 )
 
 type config struct {
@@ -17,13 +14,9 @@ type config struct {
 	Port *int
 }
 
-var rx *regexp.Regexp
 var om OffsetMap
-var omFile string
 
 func main() {
-	rx = regexp.MustCompile(`/(\d\d?)(\d\d)$`)
-
 	cfg := config{
 		flag.String("map", "./offset_map.json", "Location of 'offset_map.json'"),
 		flag.String("host", "localhost", "Hostname or IP-Address to bind to"),
@@ -62,15 +55,8 @@ func dannHandler(w http.ResponseWriter, r *http.Request) {
 	response.RespondJSON(w)
 }
 
-func parseURLForTime(url *url.URL) (h int, m int, err error) {
-	matches := rx.FindStringSubmatch(url.EscapedPath())
-
-	if len(matches) < 2 {
-		return 0, 0, errors.New("could not parse time from url '" + url.Path + "'")
-	}
-
-	h, err = strconv.Atoi(matches[1])
-	m, err = strconv.Atoi(matches[2])
-
-	return h % 24, m % 60, nil
+func parseURLForTime(url *url.URL) (h, m int, err error) {
+	var d int
+	_, err = fmt.Sscanf(url.Path, "/%4d", &d)
+	return d / 100 % 24, d % 100 % 60, err
 }
