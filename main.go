@@ -8,36 +8,33 @@ import (
 	"os"
 )
 
-type config struct {
-	Map  *string
-	Host *string
-	Port *int
-}
-
-var om OffsetMap
-
-func main() {
-	cfg := config{
+var (
+	cfg = struct {
+		Map  *string
+		Host *string
+		Port *int
+	}{
 		flag.String("map", "./offset_map.json", "Location of 'offset_map.json'"),
 		flag.String("host", "localhost", "Hostname or IP-Address to bind to"),
 		flag.Int("port", 1620, "Port number to listen on"),
 	}
-	flag.Parse()
+	om OffsetMap
+)
 
+func main() {
 	var err error
 	fmt.Print("[wo.istes.jetzt] loading offset map... ")
+	flag.Parse()
+
 	om, err = LoadOffsetMap(*cfg.Map)
 	if err != nil {
 		os.Exit(1)
 	}
 	fmt.Println("ok.")
 
-	addr := fmt.Sprintf("%s:%d", *cfg.Host, *cfg.Port)
-
 	http.HandleFunc("/", dannHandler)
 	fmt.Printf("[wo.istes.jetzt] listening on 'http://%s:%d'... ", *cfg.Host, *cfg.Port)
-	http.ListenAndServe(addr, nil)
-	fmt.Println("done.")
+	http.ListenAndServe(fmt.Sprintf("%s:%d", *cfg.Host, *cfg.Port), nil)
 }
 
 func dannHandler(w http.ResponseWriter, r *http.Request) {
