@@ -50,23 +50,20 @@ func (om *OffsetMap) UnmarshalJSON(data []byte) (err error) {
 	return err
 }
 
-func LoadOffsetMap(filename string) (om OffsetMap, err error) {
+func (om *OffsetMap) LoadFromFile(filename string) (err error) {
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
-		fmt.Println(filename, "does not exist")
-		return
+		return fmt.Errorf("%s does not exist", filename)
 	}
 
 	var input []byte
 	input, err = ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Println("could not read", filename)
-		return
+		return fmt.Errorf("could not read from %s", filename)
 	}
 
-	err = json.Unmarshal(input, &om)
+	err = json.Unmarshal(input, om)
 	if err != nil {
-		fmt.Println("could not parse contents of", filename)
-		return
+		return fmt.Errorf("could not parse contents of %s", filename)
 	}
 
 	return

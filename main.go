@@ -23,13 +23,13 @@ var (
 )
 
 func main() {
-	var err error
 	flag.Parse()
 
-	om, err = LoadOffsetMap(*cfg.Map)
-	if err != nil {
+	if err := om.LoadFromFile(*cfg.Map); err != nil {
+		n.Sayf("Fatal: %s", err.Error())
 		os.Exit(1)
 	}
+	n.Say("offset map loaded")
 
 	http.HandleFunc("/", dannHandler)
 	n.Sayf("listening on 'http://%s:%d'", *cfg.Host, *cfg.Port)
