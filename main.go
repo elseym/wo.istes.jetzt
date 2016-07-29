@@ -18,22 +18,21 @@ var (
 		flag.String("host", "localhost", "Hostname or IP-Address to bind to"),
 		flag.Int("port", 1620, "Port number to listen on"),
 	}
+	n  = NewNarrator("wo.istes.jetzt")
 	om OffsetMap
 )
 
 func main() {
 	var err error
-	fmt.Print("[wo.istes.jetzt] loading offset map... ")
 	flag.Parse()
 
 	om, err = LoadOffsetMap(*cfg.Map)
 	if err != nil {
 		os.Exit(1)
 	}
-	fmt.Println("ok.")
 
 	http.HandleFunc("/", dannHandler)
-	fmt.Printf("[wo.istes.jetzt] listening on 'http://%s:%d'... ", *cfg.Host, *cfg.Port)
+	n.Sayf("listening on 'http://%s:%d'", *cfg.Host, *cfg.Port)
 	http.ListenAndServe(fmt.Sprintf("%s:%d", *cfg.Host, *cfg.Port), nil)
 }
 
