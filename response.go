@@ -31,6 +31,7 @@ func (r *Response) appendPayloadFor(h, m int) {
 func (r *Response) RespondJSON(w http.ResponseWriter) {
 	w.WriteHeader(r.Status)
 	w.Header().Add("Content-Type", "application/json; charset=utf-8")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	data, _ := json.Marshal(r)
 	w.Write(data)
 }
