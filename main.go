@@ -10,20 +10,23 @@ import (
 
 var (
 	cfg = struct {
-		Map  *string
-		Host *string
-		Port *int
+		Map   *string
+		Host  *string
+		Port  *int
+		Quiet *bool
 	}{
 		flag.String("map", "./offset_map.json", "Location of 'offset_map.json'"),
 		flag.String("host", "localhost", "Hostname or IP-Address to bind to"),
 		flag.Int("port", 1620, "Port number to listen on"),
+		flag.Bool("quiet", false, "Whether to squelch console output"),
 	}
-	n  = NewNarrator("wo.istes.jetzt")
 	om OffsetMap
 )
 
 func main() {
 	flag.Parse()
+
+	n := NewNarrator("wo.istes.jetzt", *cfg.Quiet)
 
 	if err := om.LoadFromFile(*cfg.Map); err != nil {
 		n.Sayf("Fatal: %s", err.Error())
