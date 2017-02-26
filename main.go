@@ -2,60 +2,119 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"net/http"
-	"net/url"
 	"os"
+	"strings"
+	"time"
+
+	"github.com/elseym/go-tzlib"
+	"github.com/elseym/go-tzlib/exporters"
+	"github.com/elseym/go-tzlib/importers"
+	"github.com/elseym/wo.istes.jetzt/responders"
 )
 
-var (
-	cfg = struct {
-		Map   *string
-		Host  *string
-		Port  *int
-		Quiet *bool
-	}{
-		flag.String("map", "./offset_map.json", "Location of 'offset_map.json'"),
-		flag.String("host", "localhost", "Hostname or IP-Address to bind to"),
-		flag.Int("port", 1620, "Port number to listen on"),
-		flag.Bool("quiet", false, "Whether to squelch console output"),
-	}
-	om OffsetMap
-)
+var cfg = struct {
+	tzlib    string
+	from     string
+	webroot  string
+	endpoint string
+	bind     string
+}{}
 
-func main() {
+// init loads the configuration
+func init() {
+	flag.StringVar(&cfg.tzlib, "tzlib", "./tzlib.json", "Use database file <tzlib>")
+	flag.StringVar(&cfg.from, "from", "", "Import HTML from <from> and write database to <zlib>")
+	flag.StringVar(&cfg.webroot, "webroot", "", "Serve the <webroot> directory at '/'")
+	flag.StringVar(&cfg.endpoint, "endpoint", "/dann", "Serve the API at <endpoint>")
+	flag.StringVar(&cfg.bind, "bind", "localhost:1620", "Listen on <bind> for connections. ")
+
 	flag.Parse()
-
-	n := NewNarrator("wo.istes.jetzt", *cfg.Quiet)
-
-	if err := om.LoadFromFile(*cfg.Map); err != nil {
-		n.Sayf("Fatal: %s", err.Error())
-		os.Exit(1)
-	}
-	n.Say("offset map loaded")
-
-	http.HandleFunc("/", dannHandler)
-	n.Sayf("listening on 'http://%s:%d'", *cfg.Host, *cfg.Port)
-	http.ListenAndServe(fmt.Sprintf("%s:%d", *cfg.Host, *cfg.Port), nil)
 }
 
-func dannHandler(w http.ResponseWriter, r *http.Request) {
-	response := Response{http.StatusOK, "OK", make([]LocSpec, 0)}
+// main starts wo.istes.jetzt
+func main() {
+	if cfg.from != "" {
+		update(cfg.from, cfg.tzlib)
+	}
 
-	if h, m, err := parseURLForTime(r.URL); err == nil {
-		response.AppendPayloadFor(h, m)
-		if r.URL.Query().Get("mode") == "12h" {
-			response.AppendPayloadFor((h+12)%24, m)
+	log.Print(serve(cfg.bind, cfg.tzlib, cfg.endpoint, cfg.webroot))
+}
+
+// serve registers handlers and waits for connections
+func serve(bind, tzlibfile, endpoint, webroot string) error {
+	handleAPI(endpoint, tzlibfile)
+	// handleWebroot(webroot)
+
+	log.Printf("listening on 'http://%s'...", bind)
+	return http.ListenAndServe(bind, nil)
+}
+
+// handleAPI sets up the tzlib api server
+func handleAPI(at, jsonfile string) {
+	tl := loadlib(jsonfile)
+
+	if !strings.HasSuffix(at, "/") {
+		at += "/"
+	}
+	handler := responders.DannResponder(tl)
+
+	http.Handle(at, http.StripPrefix(at, handler))
+}
+
+// handleWebroot sets up the static file server
+func handleWebroot(webroot string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Fatal("when using --webroot, --endpoint must not equal '/': ", r)
 		}
-	} else {
-		response.SetNotFound(err)
+	}()
+
+	_, err := os.Stat(webroot)
+	if err != nil && webroot != "" {
+		log.Fatal("webroot '", webroot, "' inaccessible: ", err)
 	}
 
-	response.RespondJSON(w)
+	if webroot != "" {
+		handler := responders.PublicResponder(webroot)
+		http.Handle("/", handler)
+	}
 }
 
-func parseURLForTime(url *url.URL) (h, m int, err error) {
-	var d int
-	_, err = fmt.Sscanf(url.Path, "/%4d", &d)
-	return d / 100 % 24, d % 100 % 60, err
+// loadlib is a convenient tzlib loader
+func loadlib(jsonfile string) *tzlib.Tzlib {
+	tl, err := tzlib.Import(importers.NewJSONFile(jsonfile))
+	if err != nil {
+		log.Fatal("could not read timezones from'", jsonfile, "': ", err)
+	}
+
+	return tl
+}
+
+// update takes parsable html from file <from> or url <from>,
+// then creates a new tzlib and writes it to file <to>
+func update(from, to string) {
+	var importer tzlib.Importer
+	var err error
+	var l *tzlib.Tzlib
+
+	_, err = os.Stat(from)
+	if err == nil {
+		importer = importers.NewTimeIsFromFile(from)
+	} else {
+		importer = importers.NewTimeIsFromURL(from)
+	}
+
+	l, err = tzlib.Import(importer)
+	if err != nil {
+		log.Fatalf("error importing '%s': %s", from, err.Error())
+	}
+
+	err = l.Export(exporters.NewJSONFile(to))
+	if err != nil {
+		log.Fatalf("error exporting '%s': %s", to, err.Error())
+	}
+
+	log.Printf("update successful: got %d timezones, data expires %s", len(l.Timezones), l.Expires.Format(time.RFC822Z))
 }
