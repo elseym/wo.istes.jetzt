@@ -12,7 +12,7 @@ func expectTimeMatches(actual, expected time.Time, t *testing.T) {
 	}
 }
 
-func TestParseTime(t *testing.T) {
+func TestParseTime_Success(t *testing.T) {
 	// 6 digits
 	expectTimeMatches(ParseTime("062020"), tzlib.Time(6, 20, 20), t);
 	expectTimeMatches(ParseTime("161010"), tzlib.Time(16, 10, 10), t);

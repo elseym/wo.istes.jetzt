@@ -16,26 +16,34 @@ import (
 func ParseTime(rawInput string) time.Time {
 	h, m, s := 0, 0, 0
 
-	if len(rawInput) == 6 {
-		h, _ = strconv.Atoi(rawInput[:2])
-		m, _ = strconv.Atoi(rawInput[2:4])
-		s, _ = strconv.Atoi(rawInput[4:])
+	// from is inclusive, to exclusive
+	extractInt := func(from, to int) int {
+		i, err := strconv.Atoi(rawInput[from:to])
+		if err != nil {
+			return 0
+		}
+		return i
 	}
-	if len(rawInput) == 5 {
-		h, _ = strconv.Atoi(rawInput[:1])
-		m, _ = strconv.Atoi(rawInput[1:3])
-		s, _ = strconv.Atoi(rawInput[3:])
-	}
-	if len(rawInput) == 4 {
-		h, _ = strconv.Atoi(rawInput[:2])
-		m, _ = strconv.Atoi(rawInput[2:])
-	}
-	if len(rawInput) == 3 {
-		h, _ = strconv.Atoi(rawInput[:1])
-		m, _ = strconv.Atoi(rawInput[1:])
-	}
-	if len(rawInput) < 3 {
-		h, _ = strconv.Atoi(rawInput)
+
+	switch len(rawInput) {
+	case 6:
+		h = extractInt(0, 2)
+		m = extractInt(2, 4)
+		s = extractInt(4, 6)
+	case 5:
+		h = extractInt(0, 1)
+		m = extractInt(1, 3)
+		s = extractInt(3, 5)
+	case 4:
+		h = extractInt(0, 2)
+		m = extractInt(2, 4)
+	case 3:
+		h = extractInt(0, 1)
+		m = extractInt(1, 3)
+	case 2:
+		h = extractInt(0, 2)
+	case 1:
+		h = extractInt(0, 1)
 	}
 
 	return tzlib.Time(h, m, s)
