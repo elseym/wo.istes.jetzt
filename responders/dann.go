@@ -2,7 +2,6 @@ package responders
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -116,39 +115,8 @@ func parseURL(u string) (ts []time.Time) {
 	vs := strings.Split(strings.TrimPrefix(u, "/"), ",")
 
 	for _, v := range vs {
-		ts = append(ts, parseTime(v))
+		ts = append(ts, ParseTime(v))
 	}
 
 	return
-}
-
-// parseTime parses strings to time in a biased manner:
-// > 4 digits: (...)(h)hmmss
-// > 2 digits: (h)hmm
-// < 3 digits: (h)h
-func parseTime(u string) time.Time {
-	h, m, s := 0, 0, 0
-
-	fmt.Sscan(u, &h)
-
-	// set h to rightmost six digits
-	h %= 1e6
-
-	// h has more than four digits:
-	// assume (h)hmmss, extract seconds
-	if h > 9999 {
-		s = h % 100
-		h /= 100
-	}
-
-	// h has more than two digits:
-	// assume (h)hmm, extract minutes
-	if h > 99 {
-		m = h % 100
-		h /= 100
-	}
-
-	// h has less than three digits:
-	// assume (h)h, use as hours
-	return tzlib.Time(h, m, s)
 }
