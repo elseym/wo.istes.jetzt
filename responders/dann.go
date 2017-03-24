@@ -25,6 +25,8 @@ type dannzone struct {
 	Timezone  tzlib.Timezone `json:"timezone"`
 }
 
+type times map[string]time.Time
+
 // DannResponder returns a new and initialised DannResponder
 func DannResponder(l *tzlib.Tzlib) *dann {
 	d := &dann{tzlib: l}
@@ -34,21 +36,16 @@ func DannResponder(l *tzlib.Tzlib) *dann {
 
 // ServeHTTP handles it
 func (d dann) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	frg := strings.Split(r.URL.Path, "/")
+	ts, err := parseURL(r.URL.Path)
 
-	if len(frg) != 1 {
+	if err != nil {
 		d.respond404(w)
-		return
 	}
 
-	ts := parseURL(frg[len(frg)-1])
+	twelve := r.URL.Query().Get("mode") == "12h"
 
-	if r.URL.Query().Get("mode") == "12h" {
-		ts = twelveify(ts)
-	}
-
-	for _, t := range ts {
-		d.append(t)
+	for v, t := range ts {
+		d.attach(t, '-' != v[0], twelve)
 	}
 
 	d.respond(w)
@@ -73,10 +70,22 @@ func (d dann) respond404(w http.ResponseWriter) {
 	d.respond(w)
 }
 
-// append searches for the requested Time and adds
+// attach searches for the requested Time and adds
 // timezone information to the response
-func (d *dann) append(t time.Time) *dann {
-	z, err := d.tzlib.WhereWillItBe(t)
+func (d *dann) attach(t time.Time, future bool, twelve bool) *dann {
+	var z tzlib.Timezone
+	var err error
+
+	if twelve {
+		defer d.attach(t.Add(12*time.Hour), future, false)
+	}
+
+	if future {
+		z, err = d.tzlib.WhereWillItBe(t)
+	} else {
+		z, err = d.tzlib.WhereWasIt(t)
+	}
+
 	dz := dannzone{Requested: t.Format("15:04:05"), Message: "OK"}
 
 	if err == nil {
@@ -101,22 +110,20 @@ func (d *dann) reset() *dann {
 	return d
 }
 
-// twelveify adds after each Time its twelve hour future complement
-func twelveify(ts []time.Time) (rts []time.Time) {
-	for i := 0; i < len(ts); i++ {
-		rts = append(rts, ts[i], ts[i].Add(12*time.Hour))
-	}
-
-	return
-}
-
 // parseURL transforms "/some/prefix/2342,1620,0" to
 // Times 23:42, 16:20, 0:00 with current date
-func parseURL(u string) (ts []time.Time) {
-	vs := strings.Split(strings.TrimPrefix(u, "/"), ",")
+func parseURL(u string) (ts times, err error) {
+	frg := strings.Split(u, "/")
+
+	if len(frg) != 1 {
+		return ts, fmt.Errorf("Not Found: %s", u)
+	}
+
+	vs := strings.Split(frg[len(frg)-1], ",")
+	ts = make(times, len(vs))
 
 	for _, v := range vs {
-		ts = append(ts, parseTime(v))
+		ts[v] = parseTime(strings.TrimPrefix(v, "-"))
 	}
 
 	return
